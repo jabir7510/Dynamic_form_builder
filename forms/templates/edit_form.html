@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Edit Form: {{ form_data.title }}</h2>
+<form id="editForm" method="post">
+    {% csrf_token %}
+    <label>Title:</label>
+    <input type="text" name="title" value="{{ form_data.title }}"><br>
+    <label>Description:</label>
+    <textarea name="description">{{ form_data.description }}</textarea><br>
+    <div id="fields-container">
+        {% for field in form_data.fields %}
+            <div>
+                <label>{{ field.label }} ({{ field.field_type }})</label>
+            </div>
+        {% endfor %}
+    </div>
+    <button type="button" onclick="updateForm()">Update Form</button>
+</form>
+<form id="deleteForm" method="post">
+    {% csrf_token %}
+    <button type="button" onclick="deleteForm()">Delete Form</button>
+</form>
+
+<script>
+function updateForm() {
+    var formData = {
+        title: document.querySelector('input[name="title"]').value,
+        description: document.querySelector('textarea[name="description"]').value
+    };
+    fetch("", {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify(formData)
+    }).then(response => {
+        if(response.ok) {
+            alert("Form updated successfully.");
+            window.location.href = "{% url 'view_forms' %}";
+        }
+    });
+}
+
+function deleteForm() {
+    if(confirm("Are you sure you want to delete this form?")){
+        fetch("", {
+            method: "DELETE",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        }).then(response => {
+            if(response.ok) {
+                alert("Form deleted.");
+                window.location.href = "{% url 'view_forms' %}";
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

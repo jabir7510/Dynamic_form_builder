@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ form.title }}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #f0f2f5; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        .form-field { margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ form.title }}</h1>
+        <p><strong>Description:</strong> {{ form.description }}</p>
+        <p><strong>Created:</strong> {{ form.created_at|date:"F d, Y" }}</p>
+
+        <h2>Form Fields</h2>
+        {% for field in form.fields.all %}
+            <div class="form-field">
+                <strong>{{ field.label }}</strong>: {{ field.value }}
+            </div>
+        {% empty %}
+            <p>No fields added yet.</p>
+        {% endfor %}
+
+        <a href="{% url 'list_forms' %}">Back to My Forms</a>
+    </div>
+</body>
+</html>

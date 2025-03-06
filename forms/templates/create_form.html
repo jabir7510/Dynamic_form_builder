@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% block content %}
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .form-header {
+            background-color: #f9efff;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .form-header input, .form-header textarea {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            background: transparent;
+        }
+        .form-header textarea {
+            font-size: 1em;
+            resize: none;
+        }
+        .field-card {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin: 20px 0;
+            padding: 20px;
+            position: relative;
+        }
+        .field-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .field-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .field-header input {
+            font-size: 1.2em;
+            border: none;
+            outline: none;
+            border-bottom: 1px solid #ddd;
+            width: 60%;
+        }
+        .field-header select {
+            padding: 5px;
+            font-size: 1em;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .field-body input, .field-body textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        .field-body textarea {
+            resize: vertical;
+        }
+        .option {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .option input[type="text"] {
+            margin-left: 10px;
+            flex-grow: 1;
+        }
+        .option button {
+            background: none;
+            border: none;
+            color: #d32f2f;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .add-option {
+            color: #1a73e8;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .action-buttons {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+        }
+        .action-buttons button {
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .add-field-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background-color: #1a73e8;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        .save-btn {
+            background-color: #1a73e8;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .file-size-limit {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .dropdown-preview {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .radio-group, .checkbox-group {
+            margin: 10px 0;
+        }
+        .radio-option, .checkbox-option {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .rating-preview {
+            display: flex;
+            align-items: center;
+        }
+        .rating-preview input {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="form-header">
+            <input type="text" id="formTitle" placeholder="Untitled Form" value="Untitled Form">
+            <textarea id="formDescription" placeholder="Form Description"></textarea>
+        </div>
+        <div id="fieldsContainer"></div>
+        <button class="save-btn" onclick="saveForm()">Save Form</button>
+    </div>
+    <button class="add-field-btn" onclick="addField()">+</button>
+
+    <script>
+        // Instead of automatically creating a form on load,
+        // we now wait until the user clicks "Save Form".
+        let formId = null;
+        let fields = [];
+
+        function addField() {
+            const fieldId = fields.length + 1;
+            fields.push({
+                id: fieldId,
+                label: "Untitled Question",
+                field_type: "short_text",
+                options: [],
+                required: false
+            });
+            renderFields();
+        }
+
+        function renderFields() {
+            const container = document.getElementById("fieldsContainer");
+            container.innerHTML = '';
+            fields.forEach(field => {
+                let fieldHtml = `
+                    <div class="field-card">
+                        <div class="field-header">
+                            <input type="text" value="${field.label}" oninput="updateLabel(${field.id}, this.value)">
+                            <select onchange="updateFieldType(${field.id}, this.value)">
+                                <option value="short_text" ${field.field_type === 'short_text' ? 'selected' : ''}>Short Answer</option>
+                                <option value="paragraph" ${field.field_type === 'paragraph' ? 'selected' : ''}>Paragraph</option>
+                                <option value="multiple_choice" ${field.field_type === 'multiple_choice' ? 'selected' : ''}>Multiple Choice</option>
+                                <option value="checkboxes" ${field.field_type === 'checkboxes' ? 'selected' : ''}>Checkboxes</option>
+                                <option value="dropdown" ${field.field_type === 'dropdown' ? 'selected' : ''}>Dropdown</option>
+                                <option value="date" ${field.field_type === 'date' ? 'selected' : ''}>Date</option>
+                                <option value="time" ${field.field_type === 'time' ? 'selected' : ''}>Time</option>
+                                <option value="file_upload" ${field.field_type === 'file_upload' ? 'selected' : ''}>File Upload</option>
+                                <option value="rating" ${field.field_type === 'rating' ? 'selected' : ''}>Rating</option>
+                            </select>
+                        </div>
+                        <div class="field-body">
+                `;
+
+                if (field.field_type === 'multiple_choice') {
+                    // Updated: Use checkboxes for multiple selections
+                    fieldHtml += '<div class="checkbox-group">';
+                    field.options.forEach((option, index) => {
+                        fieldHtml += `
+                            <div class="option">
+                                <input type="checkbox" disabled>
+                                <input type="text" value="${option}" oninput="updateOption(${field.id}, ${index}, this.value)">
+                                <button onclick="removeOption(${field.id}, ${index})">X</button>
+                            </div>
+                        `;
+                    });
+                    fieldHtml += '</div>';
+                    fieldHtml += `<div class="add-option" onclick="addOption(${field.id})">Add Option</div>`;
+                } else if (field.field_type === 'checkboxes') {
+                    // Updated: Use radio buttons for single selection
+                    fieldHtml += '<div class="radio-group">';
+                    field.options.forEach((option, index) => {
+                        fieldHtml += `
+                            <div class="option">
+                                <input type="radio" name="preview_${field.id}" disabled>
+                                <input type="text" value="${option}" oninput="updateOption(${field.id}, ${index}, this.value)">
+                                <button onclick="removeOption(${field.id}, ${index})">X</button>
+                            </div>
+                        `;
+                    });
+                    fieldHtml += '</div>';
+                    fieldHtml += `<div class="add-option" onclick="addOption(${field.id})">Add Option</div>`;
+                } else if (field.field_type === 'dropdown') {
+                    fieldHtml += `
+                        <select class="dropdown-preview" disabled>
+                            ${field.options.map(option => `<option>${option}</option>`).join('')}
+                        </select>
+                        <div class="options-container">
+                    `;
+                    field.options.forEach((option, index) => {
+                        fieldHtml += `
+                            <div class="option">
+                                <input type="text" value="${option}" oninput="updateOption(${field.id}, ${index}, this.value)">
+                                <button onclick="removeOption(${field.id}, ${index})">X</button>
+                            </div>
+                        `;
+                    });
+                    fieldHtml += '</div>';
+                    fieldHtml += `<div class="add-option" onclick="addOption(${field.id})">Add Option</div>`;
+                } else if (field.field_type === 'short_text') {
+                    fieldHtml += `<input type="text" placeholder="Short answer text" disabled>`;
+                } else if (field.field_type === 'paragraph') {
+                    fieldHtml += `<textarea placeholder="Paragraph text" disabled></textarea>`;
+                } else if (field.field_type === 'date') {
+                    fieldHtml += `<input type="date" disabled>`;
+                } else if (field.field_type === 'time') {
+                    fieldHtml += `<input type="time" disabled>`;
+                } else if (field.field_type === 'file_upload') {
+                    fieldHtml += `
+                        <input type="file" disabled>
+                        <div class="file-size-limit">Maximum file size: 1MB</div>
+                    `;
+                } else if (field.field_type === 'rating') {
+                    fieldHtml += `
+                        <div class="rating-preview">
+                            <input type="range" min="1" max="5" value="3" disabled>
+                            <span>3/5</span>
+                        </div>
+                    `;
+                }
+
+                fieldHtml += `
+                        </div>
+                        <div class="action-buttons">
+                            <button onclick="duplicateField(${field.id})">📋</button>
+                            <button onclick="removeField(${field.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += fieldHtml;
+            });
+        }
+
+        function updateLabel(id, value) {
+            const field = fields.find(f => f.id === id);
+            if (field) field.label = value;
+        }
+
+        function updateFieldType(id, type) {
+            const field = fields.find(f => f.id === id);
+            if (field) {
+                field.field_type = type;
+                if (['multiple_choice', 'checkboxes', 'dropdown'].includes(type) && field.options.length === 0) {
+                    field.options = ['Option 1'];
+                }
+                renderFields();
+            }
+        }
+
+        function addOption(id) {
+            const field = fields.find(f => f.id === id);
+            if (field) {
+                field.options.push(`Option ${field.options.length + 1}`);
+                renderFields();
+            }
+        }
+
+        function updateOption(id, index, value) {
+            const field = fields.find(f => f.id === id);
+            if (field && field.options[index] !== undefined) {
+                field.options[index] = value;
+                // For dropdowns, we need to update the preview as well
+                if (field.field_type === 'dropdown') {
+                    const dropdownPreview = document.querySelector(`.field-card:nth-child(${fields.indexOf(field) + 1}) .dropdown-preview option:nth-child(${index + 1})`);
+                    if (dropdownPreview) {
+                        dropdownPreview.textContent = value;
+                    }
+                }
+            }
+        }
+
+        function removeOption(id, index) {
+            const field = fields.find(f => f.id === id);
+            if (field && field.options.length > 1) {
+                field.options.splice(index, 1);
+                renderFields();
+            } else if (field && field.options.length === 1) {
+                alert("You need at least one option for this field type.");
+            }
+        }
+
+        function duplicateField(id) {
+            const field = fields.find(f => f.id === id);
+            if (field) {
+                const newField = JSON.parse(JSON.stringify(field)); // Deep copy
+                newField.id = Math.max(...fields.map(f => f.id)) + 1;
+                fields.push(newField);
+                renderFields();
+            }
+        }
+
+        function removeField(id) {
+            fields = fields.filter(f => f.id !== id);
+            renderFields();
+        }
+
+        function validateFileSize(file) {
+            // 1MB = 1048576 bytes
+            return file.size <= 1048576;
+        }
+
+        function saveForm() {
+            // Get current title and description
+            const title = document.getElementById("formTitle").value;
+            const description = document.getElementById("formDescription").value;
+            
+            if (!formId) {
+                // Create form if it doesn't exist yet
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('description', description);
+                
+                fetch("{% url 'create_form' %}", {
+                    method: "POST",
+                    headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    formId = data.form_id;
+                    // After creation, save the fields
+                    saveFields();
+                })
+                .catch(error => {
+                    console.error("Error creating form:", error);
+                    alert("Failed to create form. Please try again.");
+                });
+            } else {
+                // Update existing form details
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('description', description);
+                
+                fetch(`/update_form/${formId}/`, {
+                    method: "PUT",
+                    headers: { "X-CSRFToken": "{{ csrf_token }}" },
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        saveFields();
+                    } else {
+                        alert("Failed to update form.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error updating form:", error);
+                    alert("Failed to update form. Please try again.");
+                });
+            }
+        }
+
+        function saveFields() {
+            fetch(`/api/forms/${formId}/fields/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}"
+                },
+                body: JSON.stringify({ fields: fields })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert("Form Saved!");
+                window.location.href = "{% url 'list_forms' %}";
+            })
+            .catch(error => {
+                console.error("Error saving fields:", error);
+                alert("Failed to save form fields. Please try again.");
+            });
+        }
+
+        // Initialize with at least one field
+        addField();
+    </script>
+    {% endblock %}
