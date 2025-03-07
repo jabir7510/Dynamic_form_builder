@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <div class="form-header">
+        <h2>Form Responses</h2>
+        <p>View all responses submitted to your forms</p>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message success">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if forms %}
+        <div class="forms-list">
+            {% for form in forms %}
+                <div class="form-item">
+                    <div class="form-info">
+                        <h3>{{ form.title }}</h3>
+                        <p>{{ form.description|truncatechars:100 }}</p>
+                        <p class="meta-info">
+                            <span class="created-date">Created: {{ form.created_at|date:"M d, Y" }}</span>
+                            <span class="response-count">Responses: {{ form.responses.count }}</span>
+                        </p>
+                    </div>
+                    <div class="form-actions">
+                        <a href="{% url 'form_responses' form.id %}" class="view-btn">View Responses</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-forms">
+            <p>You haven't created any forms yet. <a href="{% url 'create_form' %}">Create your first form</a>.</p>
+        </div>
+    {% endif %}
+    
+    <div class="back-link">
+        <a href="{% url 'dashboard' %}" class="back-btn">Back to Dashboard</a>
+    </div>
+</div>
+
+<style>
+    body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f0f2f5;
+        margin: 0;
+        padding: 20px;
+    }
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background-color: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        padding: 20px;
+    }
+    .form-header {
+        background-color: #f9efff;
+        padding: 20px;
+        border-radius: 8px 8px 0 0;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 20px;
+    }
+    .form-header h2 {
+        margin: 0;
+        font-size: 1.8em;
+        color: #333;
+    }
+    .form-header p {
+        margin: 5px 0 0;
+        color: #666;
+    }
+    .message {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+    }
+    .success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    .forms-list {
+        margin-top: 20px;
+    }
+    .form-item {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+    .form-item:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .form-info {
+        flex: 1;
+    }
+    .form-info h3 {
+        margin: 0 0 10px;
+        color: #333;
+    }
+    .form-info p {
+        margin: 0 0 10px;
+        color: #666;
+    }
+    .meta-info {
+        font-size: 0.85em;
+        color: #888;
+    }
+    .created-date, .response-count {
+        margin-right: 15px;
+    }
+    .form-actions {
+        display: flex;
+        gap: 10px;
+    }
+    .view-btn {
+        background-color: #1a73e8;
+        color: #fff;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9em;
+        transition: background-color 0.2s;
+    }
+    .view-btn:hover {
+        background-color: #0d62d6;
+    }
+    .no-forms {
+        background-color: #f8f9fa;
+        padding: 30px;
+        text-align: center;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    .no-forms p {
+        margin: 0;
+        color: #666;
+    }
+    .no-forms a {
+        color: #1a73e8;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .back-link {
+        margin-top: 20px;
+        text-align: center;
+    }
+    .back-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #f0f2f5;
+        color: #555;
+        text-decoration: none;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+    .back-btn:hover {
+        background-color: #e0e2e5;
+    }
+</style>
+{% endblock %}

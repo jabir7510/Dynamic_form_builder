@@ -3,12 +3,22 @@ from django.contrib.auth.models import User
 import uuid, json
 
 class Form(models.Model):
+    VISIBILITY_CHOICES = [
+        ('public', 'Public'),    # Anyone can access
+        ('private', 'Private'),  # Only logged-in users can access
+    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    submitted_by_email = models.EmailField(blank=True, null=True)
     unique_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)  # For shareable link
-
+    visibility = models.CharField(
+        max_length=7,
+        choices=VISIBILITY_CHOICES,
+        default='public',
+    )
+    
     def __str__(self):
         return self.title
 
@@ -46,6 +56,7 @@ class FormField(models.Model):
 class FormResponse(models.Model):
     form = models.ForeignKey(Form, related_name="responses", on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    submitted_by_email = models.EmailField(blank=True, null=True)  # Add this field
 
 class FormResponseField(models.Model):
     response = models.ForeignKey(FormResponse, related_name="fields", on_delete=models.CASCADE)

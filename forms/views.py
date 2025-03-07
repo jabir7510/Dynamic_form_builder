@@ -58,7 +58,6 @@ class DashboardView(View):
         return render(request, 'dashboard.html')
 
 
-
 @method_decorator(login_required, name='dispatch')
 class FormAPIView(APIView):
     """
@@ -87,9 +86,26 @@ class FormAPIView(APIView):
         elif url_name == 'form_detail' and form_id:
             form = get_object_or_404(Form, id=form_id, user=request.user)
             return render(request, 'form_detail.html', {'form': form})
+        elif url_name == 'update_form' and form_id:
+            form = get_object_or_404(Form, id=form_id, user=request.user)
+            fields = form.fields.all().order_by('order')
+            form_data = {
+                'title': form.title,
+                'description': form.description,
+                'fields': fields
+            }
+            return render(request, 'edit_form.html', {'form_data': form_data})
+    
         elif url_name == 'public_form' and unique_id:
             form = get_object_or_404(Form, unique_id=unique_id)
+            
+            # Check if form is private and user is not authenticated
+            if form.visibility == 'private' and not request.user.is_authenticated:
+                # Redirect to login page with next parameter to return after login
+                return redirect(f'/login/?next=/form/{unique_id}/')
+                
             return render(request, 'public_form.html', {'form': form})
+
         else:
             return Response({"error": "Invalid GET request"}, status=400)
     
@@ -99,8 +115,11 @@ class FormAPIView(APIView):
             # Create a new form record.
             title = request.POST.get('title', 'Untitled Form')
             description = request.POST.get('description', '')
-            form_obj = Form.objects.create(user=request.user, title=title, description=description)
+            visibility = request.POST.get('visibility', 'public')
+
+            form_obj = Form.objects.create(user=request.user, title=title, description=description, visibility=visibility)
             return JsonResponse({'form_id': form_obj.id, 'unique_id': str(form_obj.unique_id)}, status=201)
+        
         elif url_name == 'delete_form' and form_id:
             # Delete via POST (you can also use the DELETE method if preferred).
             form = get_object_or_404(Form, id=form_id, user=request.user)
@@ -110,8 +129,7 @@ class FormAPIView(APIView):
         else:
             return Response({"error": "Invalid POST request"}, status=400)
     
-    def put(self, request, form_id=None, unique_id=None):
-        # Update an existing form. The form_id must be provided.
+    def put(self, request, form_id=None):
         if form_id:
             form = get_object_or_404(Form, id=form_id, user=request.user)
             title = request.data.get('title', form.title)
@@ -129,6 +147,7 @@ class FormAPIView(APIView):
             form.delete()
             return JsonResponse({'status': 'success', 'message': 'Form deleted successfully.'})
         return Response({'error': 'Form ID required for deletion.'}, status=400)
+
 # --------- API for Dynamic Form Fields ---------
 
 @method_decorator(login_required, name='dispatch')
@@ -182,30 +201,118 @@ class FormFieldAPIView(APIView):
             return JsonResponse({'fields': created_fields}, status=201)
         except Exception as e:
             return HttpResponseBadRequest(str(e))
-
-# --------- Public Form Views ---------
+        
 
 class PublicFormView(View):
+    def dispatch(self, request, *args, **kwargs):
+        self.form = get_object_or_404(Form, unique_id=kwargs.get('unique_id'))
+        if self.form.visibility == 'private' and not request.user.is_authenticated:
+            messages.error(request, "You must be logged in to access this form.")
+            return redirect('login')
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request, unique_id):
-        form = get_object_or_404(Form, unique_id=unique_id)
-        fields = form.fields.all().order_by('order')
-        return render(request, 'public_form.html', {'form': form, 'fields': fields})
+        # Check if the authenticated user is the form creator
+        if request.user.is_authenticated and self.form.user == request.user:
+            messages.error(request, "You cannot fill your own form.")
+            return redirect('dashboard')
+        
+        fields = self.form.fields.all().order_by('order')
+        return render(request, 'public_form.html', {'form': self.form, 'fields': fields})
 
     def post(self, request, unique_id):
-        form = get_object_or_404(Form, unique_id=unique_id)
-        fields = form.fields.all().order_by('order')
+        # Check if the authenticated user is the form creator
+        if request.user.is_authenticated and self.form.user == request.user:
+            messages.error(request, "You cannot fill your own form.")
+            return redirect('dashboard')
+        
+        fields = self.form.fields.all().order_by('order')
+        submitted_by_email = self.get_submitter_email(request)
+        form_response = self.create_form_response(submitted_by_email)
+        self.save_field_responses(request, form_response, fields)
+        messages.success(request, "Form submitted successfully!")
+        return redirect('public_form', unique_id=unique_id)
 
-        # Create a new form response
-        form_response = FormResponse.objects.create(form=form)
+    def get_submitter_email(self, request):
+        if self.form.visibility == 'private' and request.user.is_authenticated:
+            return request.user.email
+        return ""
 
-        # Save each field response
+    def create_form_response(self, submitted_by_email):
+        return FormResponse.objects.create(
+            form=self.form,
+            submitted_by_email=submitted_by_email
+        )
+
+    def save_field_responses(self, request, form_response, fields):
         for field in fields:
-            field_value = request.POST.get(f'field_{field.id}', '')
+            if field.field_type == 'multiple_choice':
+                self.save_multiple_choice_responses(request, form_response, field)
+            else:
+                self.save_single_value_response(request, form_response, field)
+
+    def save_multiple_choice_responses(self, request, form_response, field):
+        selected_values = request.POST.getlist(f'field_{field.id}')
+        for value in selected_values:
+            if value:
+                FormResponseField.objects.create(
+                    response=form_response,
+                    form_field=field,
+                    value=value
+                )
+
+    def save_single_value_response(self, request, form_response, field):
+        field_value = request.POST.get(f'field_{field.id}', '')
+        if field_value:
             FormResponseField.objects.create(
                 response=form_response,
                 form_field=field,
                 value=field_value
             )
 
-        messages.success(request, "Form submitted successfully!")
-        return redirect('public_form', unique_id=unique_id)
+
+    
+# --------- Form Response Views ---------
+
+@method_decorator(login_required, name='dispatch')
+class ListResponsesView(View):
+    def get(self, request):
+        forms = Form.objects.filter(user=request.user).order_by('-created_at')
+        return render(request, 'list_responses.html', {'forms': forms})
+
+@method_decorator(login_required, name='dispatch')
+class FormResponsesView(View):
+    def get(self, request, form_id):
+        form = get_object_or_404(Form, id=form_id, user=request.user)
+        responses = FormResponse.objects.filter(form=form).order_by('-created_at')
+        
+        # Prepare response data for template
+        response_data = []
+        for response in responses:
+            fields = FormResponseField.objects.filter(response=response)
+            field_values = {}
+            for field in fields:
+                label = field.form_field.label
+                if field.form_field.field_type == 'multiple_choice':
+                    # Collect all values for multiple_choice into a list
+                    if label not in field_values:
+                        field_values[label] = []
+                    field_values[label].append(field.value)
+                else:
+                    # Single value for other field types
+                    field_values[label] = field.value
+            response_data.append({
+                'id': response.id,
+                'created_at': response.created_at,
+                'fields': field_values,
+                'submitted_by_email': response.submitted_by_email,
+            })
+            
+        # Get form fields for potential use in template
+        form_fields = FormField.objects.filter(form=form).order_by('order')
+        
+        return render(request, 'form_responses.html', {
+            'form': form,
+            'responses': response_data,
+            'form_fields': form_fields
+        })

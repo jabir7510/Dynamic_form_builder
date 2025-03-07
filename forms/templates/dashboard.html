@@ -24,6 +24,27 @@
                 <a href="{% url 'list_forms' %}" class="save-btn">View Forms</a>
             </div>
         </div>
+        
+        <div class="field-card">
+            <div class="field-header">
+                <h3>View Form Responses</h3>
+            </div>
+            <div class="field-body">
+                <p>Browse and analyze all responses submitted to your forms.</p>
+                <a href="{% url 'list_responses' %}" class="save-btn">View Responses</a>
+            </div>
+        </div>
+
+        <div class="field-card">
+            <div class="field-header">
+                <h3>Fill a Private Form</h3>
+            </div>
+            <div class="field-body">
+                <p>Paste the link to a private form to fill it out (authentication required).</p>
+                <input type="text" id="formLink" placeholder="e.g., http://localhost:8000/forms/public/<unique_id>/" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                <button class="save-btn" onclick="redirectToForm()">Go to Form</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -109,4 +130,22 @@
         }
     }
 </style>
+
+<script>
+function redirectToForm() {
+    const link = document.getElementById('formLink').value.trim();
+    if (!link) {
+        alert("Please enter a form link.");
+        return;
+    }
+    // Extract unique_id from the URL (assumes format like /forms/public/<unique_id>/)
+    const match = link.match(/forms\/public\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/);
+    if (match && match[1]) {
+        const uniqueId = match[1];
+        window.location.href = `/forms/public/${uniqueId}/`;
+    } else {
+        alert("Invalid form link format. Please use a valid URL like '/forms/public/<unique_id>/'.");
+    }
+}
+</script>
 {% endblock %}

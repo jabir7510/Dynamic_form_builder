@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <div class="form-header">
+        <h2>Responses for: {{ form.title }}</h2>
+        <p>{{ form.description }}</p>
+    </div>
+    
+    {% if responses %}
+        <div class="response-stats">
+            <div class="stat-card">
+                <span class="stat-number">{{ responses|length }}</span>
+                <span class="stat-label">Total Responses</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ form.created_at|date:"M d, Y" }}</span>
+                <span class="stat-label">Form Created</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">{{ responses.0.created_at|date:"M d, Y" }}</span>
+                <span class="stat-label">Latest Response</span>
+            </div>
+        </div>
+        
+        <div class="responses-section">
+            <h3>All Responses</h3>
+            
+
+            <div class="responses-list">
+                {% for response in responses %}
+                    <div class="response-card" data-response-id="{{ response.id }}">
+                        <div class="response-header">
+                            <span class="response-number">Response #{{ forloop.counter }}</span>
+                            <span class="response-date">{{ response.created_at|date:"M d, Y - H:i" }}</span>
+                            {% if response.submitted_by_email %}
+                                <strong>Submitted by:</strong> {{ response.submitted_by_email }}<br>
+                            {% endif %}
+                            <span class="toggle-detail-btn">View Details</span>
+                        </div>
+                        <div class="response-body">
+                            <table class="response-table">
+                                <thead>
+                                    <tr>
+                                        <th>Question</th>
+                                        <th>Answer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for field_label, field_value in response.fields.items %}
+                                    <tr>
+                                        <td class="field-question">{{ field_label }}</td>
+                                        <td class="field-answer">
+                                            {% if field_value is iterable %}
+                                                {% if field_value|length > 0 %}
+                                                    {{ field_value|join:", " }}
+                                                {% else %}
+                                                    No response
+                                                {% endif %}
+                                            {% else %}
+                                                {{ field_value|default:"No response" }}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="no-responses">
+            <p>No responses have been submitted to this form yet.</p>
+            <p>Share your form using this link: 
+                <a href="{% url 'public_form' form.unique_id %}" class="form-link" target="_blank">
+                    {% url 'public_form' form.unique_id as form_url %}
+                    {{ request.scheme }}://{{ request.get_host }}{{ form_url }}
+                </a>
+            </p>
+            <button id="copyLink" class="copy-btn" data-link="{% url 'public_form' form.unique_id %}">
+                Copy Link
+            </button>
+        </div>
+    {% endif %}
+    
+    <div class="action-buttons">
+        <a href="{% url 'list_responses' %}" class="back-btn">Back to All Forms</a>
+        <a href="{% url 'dashboard' %}" class="back-btn">Back to Dashboard</a>
+    </div>
+</div>
+
+<style>
+    body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f0f2f5;
+        margin: 0;
+        padding: 20px;
+    }
+    .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background-color: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        padding: 20px;
+    }
+    .form-header {
+        background-color: #f9efff;
+        padding: 20px;
+        border-radius: 8px 8px 0 0;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 20px;
+    }
+    .form-header h2 {
+        margin: 0;
+        font-size: 1.8em;
+        color: #333;
+    }
+    .form-header p {
+        margin: 5px 0 0;
+        color: #666;
+    }
+    .response-stats {
+        display: flex;
+        justify-content: space-between;
+        margin: 20px 0;
+        gap: 15px;
+    }
+    .stat-card {
+        background-color: #f9fafb;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        flex: 1;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+    }
+    .stat-number {
+        font-size: 1.6em;
+        font-weight: bold;
+        color: #1a73e8;
+        margin-bottom: 5px;
+    }
+    .stat-label {
+        font-size: 0.9em;
+        color: #666;
+    }
+    .responses-section {
+        margin-top: 30px;
+    }
+    .responses-section h3 {
+        margin: 0 0 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        color: #333;
+    }
+    .response-filter {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+    .filter-btn {
+        background-color: #f0f2f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: all 0.2s;
+    }
+    .filter-btn:hover {
+        background-color: #e0e2e5;
+    }
+    .responses-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    .response-card {
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .response-header {
+        background-color: #f9fafb;
+        padding: 12px 15px;
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+    }
+    .response-number {
+        font-weight: 500;
+        color: #333;
+    }
+    .response-date {
+        color: #666;
+        font-size: 0.9em;
+    }
+    .toggle-detail-btn {
+        color: #1a73e8;
+        font-weight: 500;
+        cursor: pointer;
+    }
+    .toggle-detail-btn:hover {
+        text-decoration: underline;
+    }
+    .response-body {
+        padding: 15px;
+        display: none;
+    }
+    .response-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    .response-table th,
+    .response-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+    .response-table th {
+        background-color: #f9fafb;
+        font-weight: 500;
+    }
+    .field-question {
+        font-weight: 500;
+        color: #333;
+        width: 30%;
+    }
+    .field-answer {
+        color: #666;
+        width: 70%;
+    }
+    .no-responses {
+        background-color: #f8f9fa;
+        padding: 30px;
+        text-align: center;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    .no-responses p {
+        margin: 0 0 15px;
+        color: #666;
+    }
+    .form-link {
+        display: block;
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #f0f2f5;
+        border-radius: 4px;
+        word-break: break-all;
+        color: #1a73e8;
+        text-decoration: none;
+    }
+    .copy-btn {
+        background-color: #1a73e8;
+        color: #fff;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background-color 0.2s;
+    }
+    .copy-btn:hover {
+        background-color: #0d62d6;
+    }
+    .action-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 30px;
+    }
+    .back-btn {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #f0f2f5;
+        color: #555;
+        text-decoration: none;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+    }
+    .back-btn:hover {
+        background-color: #e0e2e5;
+    }
+    
+    /* For compact view */
+    .compact-view .response-body {
+        display: none !important;
+    }
+    .active .response-header {
+        background-color: #f0f7ff;
+        border-bottom: 1px solid #cde1ff;
+    }
+    .active .toggle-detail-btn {
+        color: #0d62d6;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle between compact and detailed view
+        const toggleBtn = document.getElementById('toggleView');
+        const responsesList = document.querySelector('.responses-list');
+        
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function() {
+                responsesList.classList.toggle('compact-view');
+                
+                // Reset all expanded responses when toggling to compact view
+                if (responsesList.classList.contains('compact-view')) {
+                    document.querySelectorAll('.response-card').forEach(card => {
+                        card.classList.remove('active');
+                        card.querySelector('.response-body').style.display = 'none';
+                        card.querySelector('.toggle-detail-btn').textContent = 'View Details';
+                    });
+                }
+            });
+        }
+        
+        // Handle individual response toggling
+        const responseCards = document.querySelectorAll('.response-card');
+        responseCards.forEach(card => {
+            const header = card.querySelector('.response-header');
+            const body = card.querySelector('.response-body');
+            const toggleBtn = card.querySelector('.toggle-detail-btn');
+            
+            header.addEventListener('click', function() {
+                // If we're in compact view, return early
+                if (responsesList.classList.contains('compact-view')) {
+                    return;
+                }
+                
+                // Close other open responses
+                responseCards.forEach(otherCard => {
+                    if (otherCard !== card && otherCard.classList.contains('active')) {
+                        otherCard.classList.remove('active');
+                        otherCard.querySelector('.response-body').style.display = 'none';
+                        otherCard.querySelector('.toggle-detail-btn').textContent = 'View Details';
+                    }
+                });
+                
+                // Toggle current response
+                const isActive = card.classList.contains('active');
+                card.classList.toggle('active');
+                body.style.display = isActive ? 'none' : 'block';
+                toggleBtn.textContent = isActive ? 'View Details' : 'Hide Details';
+            });
+        });
+        
+        // Copy form link
+        const copyBtn = document.getElementById('copyLink');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', function() {
+                const link = window.location.origin + this.getAttribute('data-link');
+                navigator.clipboard.writeText(link).then(() => {
+                    copyBtn.textContent = 'Link Copied!';
+                    setTimeout(() => {
+                        copyBtn.textContent = 'Copy Link';
+                    }, 2000);
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}
