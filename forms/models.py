@@ -62,3 +62,4 @@ class FormResponseField(models.Model):
     response = models.ForeignKey(FormResponse, related_name="fields", on_delete=models.CASCADE)
     form_field = models.ForeignKey(FormField, on_delete=models.CASCADE)
     value = models.TextField(blank=True, null=True)  # Stores the response value
+    uploaded_file = models.FileField(upload_to='form_uploads/', blank=True, null=True) 

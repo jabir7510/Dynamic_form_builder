@@ -1,4 +1,5 @@
 import json
+from urllib import request
 import uuid
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, authenticate, logout
@@ -262,13 +263,21 @@ class PublicFormView(View):
                 )
 
     def save_single_value_response(self, request, form_response, field):
-        field_value = request.POST.get(f'field_{field.id}', '')
-        if field_value:
+        if field.field_type == 'file_upload' and f'field_{field.id}' in request.FILES:
+            uploaded_file = request.FILES[f'field_{field.id}']
             FormResponseField.objects.create(
                 response=form_response,
                 form_field=field,
-                value=field_value
+                uploaded_file=uploaded_file  # Store the file
             )
+        else:
+            field_value = request.POST.get(f'field_{field.id}', '')
+            if field_value:
+                FormResponseField.objects.create(
+                    response=form_response,
+                    form_field=field,
+                    value=field_value
+                )
 
 
     
@@ -286,7 +295,6 @@ class FormResponsesView(View):
         form = get_object_or_404(Form, id=form_id, user=request.user)
         responses = FormResponse.objects.filter(form=form).order_by('-created_at')
         
-        # Prepare response data for template
         response_data = []
         for response in responses:
             fields = FormResponseField.objects.filter(response=response)
@@ -294,12 +302,12 @@ class FormResponsesView(View):
             for field in fields:
                 label = field.form_field.label
                 if field.form_field.field_type == 'multiple_choice':
-                    # Collect all values for multiple_choice into a list
                     if label not in field_values:
                         field_values[label] = []
                     field_values[label].append(field.value)
+                elif field.form_field.field_type == 'file_upload' and field.uploaded_file:
+                    field_values[label] = field.uploaded_file.url  # Use URL for file
                 else:
-                    # Single value for other field types
                     field_values[label] = field.value
             response_data.append({
                 'id': response.id,
@@ -307,8 +315,7 @@ class FormResponsesView(View):
                 'fields': field_values,
                 'submitted_by_email': response.submitted_by_email,
             })
-            
-        # Get form fields for potential use in template
+        
         form_fields = FormField.objects.filter(form=form).order_by('order')
         
         return render(request, 'form_responses.html', {
